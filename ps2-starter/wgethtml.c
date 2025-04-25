@@ -59,8 +59,37 @@ int main(int argc,char* argv[]) {
     * A helper function is given to readResponse.
     * Print the response on stdout.
    */
-   
-   return 0;
-}
 
+    // Resolve host
+    struct hostent* he = gethostbyname(host);
+    if (!he) {
+        fprintf(stderr, "Unknown host: %s\n", host);
+        return 1;
+    }
+
+    // Build sockaddr_in
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port   = htons(port);
+    memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+
+    // create socket and connect
+    int sid = socket(AF_INET, SOCK_STREAM, 0);
+    checkError(sid, __LINE__);
+    checkError(connect(sid, (struct sockaddr*)&addr, sizeof(addr)), __LINE__);
+
+    // send GET request
+    char req[1024];
+    snprintf(req, sizeof(req), "GET %s\n", url);
+    checkError(write(sid, req, strlen(req)), __LINE__);
+
+    // read and print response
+    char* response = readResponse(sid);
+    printf("%s", response);
+    free(response);
+    close(sid);
+
+    return 0;
+}
 
