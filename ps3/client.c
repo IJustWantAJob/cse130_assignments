@@ -64,6 +64,51 @@ int main(int argc,char* argv[])  {
             Read response from the server and print it out to stdout.
             Hint: use the select API to read input from both the file descriptors above.
    */
+   int stdin_closed = 0;
+   while (1) {
+      fd_set rfds;
+      FD_ZERO(&rfds);
+      if (!stdin_closed) {
+         FD_SET(STDIN_FILENO, &rfds);
+      } 
+      FD_SET(sid, &rfds);
+      int nfds = (sid > STDIN_FILENO ? sid : STDIN_FILENO) + 1;
+      int s = select(nfds, &rfds, NULL, NULL, NULL);
+      checkError(s, __LINE__);
 
-   return 0;
+// if data in stdin
+// read SQL command and send
+      if (!stdin_closed && FD_ISSET(STDIN_FILENO, &rfds)) {
+         char *cmd = readString();
+         if (cmd) {
+            int len = strlen(cmd), sent = 0;
+            while (sent < len) {
+              int w = write(sid, cmd + sent, len - sent);
+              checkError(w, __LINE__);
+              sent += w;
+            }
+              
+         free(cmd);
+         } else {
+            stdin_closed = 1;
+         }
+      }
+      // ddata from server then read and print
+      if (FD_ISSET(sid, &rfds)) {
+         char buf[4096];
+         int r = read(sid, buf, sizeof(buf) - 1);
+         if (r <= 0) {
+            break; // closed connection
+         }
+         buf[r] = '\0';
+         printf("%s", buf);
+      }
+   }
+      close(sid);
+      return 0;
 }
+
+
+
+ 
+

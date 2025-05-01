@@ -36,5 +36,14 @@ int main(int argc,char* argv[]) {
 
    /* TODO: Connect to the server and send the string '$die!' to terminate the server. */
 
+   const char *msg = "$die!";
+   int len = strlen(msg), sent = 0;
+   while (sent < len) {
+      int w = write(sid, msg + sent, len - sent);
+      checkError(w, __LINE__);
+      sent += w;
+   }
+
+   close(sid);
    return 0;
 }
