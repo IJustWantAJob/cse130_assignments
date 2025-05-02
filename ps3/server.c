@@ -60,7 +60,63 @@ int main(int argc,char* argv[]) {
            *
            * Hint: use the select API to listen to both ports sid and srv. Set nfds as the max of two fds + 1.
         */
-   }
+
+      fd_set rfds;
+      FD_ZERO(&rfds);
+      FD_SET(sid, &rfds);
+      FD_SET(srv, &rfds);
+      int nfds = (sid > srv ? sid : srv) + 1;
+      int sel = select(nfds, &rfds, NULL, NULL, NULL);
+      checkError(sel, __LINE__);
+
+
+      if (FD_ISSET(srv, &rfds)) {
+         int ctrl = accept(srv, NULL, NULL);
+         checkError(ctrl, __LINE__);
+         char buf[16] = {0};
+         int r = read(ctrl, buf, sizeof(buf) -1);
+         if (r > 0 && strcmp(buf, "$die!") == 0) {
+            close(ctrl);
+            close(srv);
+            close(sid);
+            cleanupDeadChildren();
+            printf("terminated...\n");
+            exit(0);
+
+         } else {
+            char reply[128];
+            snprintf(reply, sizeof(reply), "bad command [%.*s]\n", r > 0 ? r : 0, buf);
+            write(ctrl, reply, strlen(reply));
+            close(ctrl);
+         }
+      }
+      if (FD_ISSET(sid, &rfds)) {
+         int client = accept(sid, NULL, NULL);
+         checkError(client, __LINE__);
+         pid_t pid = fork();
+         if (pid > 0) {
+// parent
+
+            close(client);
+            cleanupDeadChildren();
+         } else if (pid == 0) {
+            // child
+            close(sid);
+            close(srv);
+            dup2(client, STDIN_FILENO);
+            dup2(client, STDOUT_FILENO);
+            dup2(client, STDERR_FILENO);
+            close(client);
+            execlp("sqlite3", "sqlite3", "foobar.db", (char*)NULL);
+            // if execlp fails
+            perror("execlp failed");
+            exit(1);
+         } else {
+            checkError(pid, __LINE__);
+         }
+      }
+}
+
    
    close(srv);
    close(sid);
