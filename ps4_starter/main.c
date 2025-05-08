@@ -49,5 +49,70 @@ int main(int argc,char* argv[]) {
       6. Print the resultant matrix using the printMatrix() function.  
       7. Clean up all resources. */
    
+   // 1
+   size_t resultSize = sizeMatrix(a->r, b->c);
+   if (ftruncate(md, resultSize) == -1) {
+      perror("ftruncate");
+      exit(1);
+   }
+
+   // 2
+   void* addr = nmap(NULL, resultSize, PROT_READ | PROT_WRITE, MAP_SHARED, md, 0);
+   if (addr == MAP_FAILED) {
+      perror("nmap");
+      exit(1);
+   }
+   Matrix* result = makeMatrixMap(addr, a->r, b->c);
+
+   // 3
+   const char* semName = "/matSem";
+   sem_unlink(semName);
+   sem_t* sem = sem_open(semName, O_CREAT, 0600, 0);
+   if (sem == SEM_FAILED) {
+      perror("sem_open");
+      exit(1);
+   }
+
+   // 4
+   parMultMatrix(nbW, sem, a, b, result);
+
+   // 5
+   for (int i = 0; i < nbW; i++) {
+      if (sem_wait(sem) == -1) {
+         perror("sem_wait");
+         exit(1);
+      }
+   }
+
+
+// 6
+   printMatrix(result);
+  
+
+// 7
+
+   sem_close(sem);
+   sem_unlink(semName);
+   munmap(addr, resultSize);
+   close(md);
+   shm_unlink(zone);
+   return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
    return 0;
 }
