@@ -57,9 +57,9 @@ int main(int argc,char* argv[]) {
    }
 
    // 2
-   void* addr = nmap(NULL, resultSize, PROT_READ | PROT_WRITE, MAP_SHARED, md, 0);
+   void* addr = mmap(NULL, resultSize, PROT_READ | PROT_WRITE, MAP_SHARED, md, 0);
    if (addr == MAP_FAILED) {
-      perror("nmap");
+      perror("mmap");
       exit(1);
    }
    Matrix* result = makeMatrixMap(addr, a->r, b->c);
@@ -96,23 +96,5 @@ int main(int argc,char* argv[]) {
    munmap(addr, resultSize);
    close(md);
    shm_unlink(zone);
-   return 0;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
    return 0;
 }
