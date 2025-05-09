@@ -83,18 +83,53 @@ void printMatrix(Matrix* m) {
    }
 }
 
-Matrix* multMatrix(Matrix* a,Matrix* b,Matrix* into) {  
-   /* TODO: Compute the product of A * B and store the result in `into`.
-    * The computation here is sequential (done by 1 process) and is only meant to be used as a check for your parallel code i.e. use only for debugging.
-    * A matrix multiplication of size m x n * n x p yields an m x p matrix.
-    * Return the matrix `into` that stores the result.
-    */
+Matrix* multMatrix(Matrix* a, Matrix* b, Matrix* into) {
+   for (int i = 0; i < into->r; i++) {
+      for (int j = 0; j < into->c; j++) {
+         M(into, i, j) = 0;
+      }
+   }
+
+   for (int i = 0; i < a->r; i++) {
+      for (int k = 0; k < a->c; k++) {
+         int a_val = M(a,i,k);
+         for (int j = 0; j < b->c; j++) {
+            M(into, i, j) += a_val * M(b, k, j);
+         }
+      }
+   }
+   return into;
 }
 
+
 Matrix* parMultMatrix(int nbW,sem_t* sem,Matrix* a,Matrix* b,Matrix* into) {
-   /* TODO: Compute the product of A * B and store the result in `into`
-    * The computation is done in parallel with nbW worker processes that you fork from here.
-    * It should have the same output as the sequential version, but faster. 
-    * Return the matrix `into` that stores the result.
-    */
+   int totalRows = a->r;
+   int baseRows = totalRows / nbW;
+   int extra = totalRows % nbW;
+   int start = 0;
+
+   for (int w = 0; w < nbW; w++) {
+      int rows = baseRows + (w < extra ? 1 : 0);
+      pid_t pid = fork();
+      if (pid < 0) {
+         perror("fork");
+         exit(1);
+      }
+
+      if (pid == 0) {
+         for (int i = start; i < start + rows; i++) {
+            for (int k = 0; k < a->c; k++) {
+               int a_val = M(a, i, k);
+               for (int j = 0; j < b->c; j++) {
+                  M(into, i, j) += a_val * M(b, k, j);
+               }
+            }
+         }
+         sem_post(sem);
+         _exit(0);
+      }
+      start += rows;
+   }
+   return into;
 }
+

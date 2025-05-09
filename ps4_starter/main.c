@@ -62,7 +62,11 @@ int main(int argc,char* argv[]) {
       perror("mmap");
       exit(1);
    }
+   //Matrix* result = makeMatrixMap(addr, a->r, b->c);
+   memset(addr, 0, resultSize);
    Matrix* result = makeMatrixMap(addr, a->r, b->c);
+
+
 
    // 3
    const char* semName = "/matSem";
