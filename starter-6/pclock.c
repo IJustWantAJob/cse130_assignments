@@ -54,7 +54,7 @@ void *thread_p(void* producer_thread_data) {
 		sb->guess = guess;
 		sb->status = 1;
 	
-		printf("My guess is %d.\n", guess);
+		printf("My guess is %d.\n\n", guess);
 		fflush(stdout);
 
 		pthread_cond_signal(&arg->cond_guess);
