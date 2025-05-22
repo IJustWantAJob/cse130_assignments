@@ -24,6 +24,21 @@ int gmn_check(gmn_t *pg) {
      * 
      * Return the appropriate int value.
     */
-    return 0; /* Fix me */
+
+	if (pg->guess == pg->value) {
+		pg->result = 0;
+		snprintf(pg->message, MSG_BUF_SIZE, "Congrats! You guessed the number %d.\n", pg->value);
+	} else if (pg->guess < pg->value) {
+		pg->result = 1;
+		snprintf(pg->message, MSG_BUF_SIZE, "Your guess is smaller than the value\n");
+	} else {
+		pg->result = -1;
+		snprintf(pg->message, MSG_BUF_SIZE, "Your guess is greater than the value\n");
+	}
+	return pg->result;
 }
+
+
+//    return 0; /* Fix me */
+
 
