@@ -64,7 +64,8 @@ void *thread_p(void* producer_thread_data) {
 
 		res = sb->result;
 		printf("%s", sb->message);
-	
+		if (res != 0)
+			printf("\n");
 		if (res == 0) {
 			pthread_mutex_unlock(&arg->mutex);
 			break;
@@ -95,9 +96,9 @@ int main(int argc,char* argv[]) {
 
 	int secret = atoi(argv[1]);
 	if (secret < 1 || secret > MAX_VALUE) {
-		fprintf(stderr, "Error: number must be between 1 and %d\n", MAX_VALUE);
 		return EXIT_FAILURE;
 	}
+
 
 	gmn_t *sb = gmn_init(secret);
 	thread_arg_t arg;
