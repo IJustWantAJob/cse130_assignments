@@ -96,6 +96,7 @@ int main(int argc,char* argv[]) {
 
 	int secret = atoi(argv[1]);
 	if (secret < 1 || secret > MAX_VALUE) {
+		fprintf(stderr, "Usage: %s <number to guess>\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
