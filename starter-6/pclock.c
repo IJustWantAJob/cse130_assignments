@@ -82,24 +82,26 @@ void *thread_p(void* producer_thread_data) {
 }
 
 int main(int argc,char* argv[]) {
-    /* TODO
-     * Create an instance of thread_arg_t and initialize it. The value to be guessed is taken as input from the command line arguments.
-     * Create two threads - one each for the player and the checker
-     * Join the threads and reap the resources (destroy the mutexes and condition variables used).
-    */
- //   return 0;
 
-	if (argc != 2) {
+        if (argc != 2) {
+                fprintf(stderr, "Usage: %s <number to guess>\n", argv[0]);
+                return EXIT_FAILURE;
+        }
+
+	char *endptr;
+	errno = 0;
+	long val = strtol(argv[1], &endptr, 10);
+
+	if (endptr == argv[1] || *endptr != '\0' || errno == ERANGE) {
 		fprintf(stderr, "Usage: %s <number to guess>\n", argv[0]);
+		return EXIT_FAILURE;
+	}	
+	if (val < 1 || val > MAX_VALUE) {
+		fprintf(stderr, "Error: number must be between 1 and %d\n", MAX_VALUE);
 		return EXIT_FAILURE;
 	}
 
-	int secret = atoi(argv[1]);
-	if (secret < 1 || secret > MAX_VALUE) {
-		fprintf(stderr, "Usage: %s <number to guess>\n", argv[0]);
-		return EXIT_FAILURE;
-	}
-
+	int secret = (int)val;
 
 	gmn_t *sb = gmn_init(secret);
 	thread_arg_t arg;
