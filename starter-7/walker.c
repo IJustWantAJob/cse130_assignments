@@ -24,6 +24,8 @@ void* thread_main(void* thread_arg) {
     int id = arg->id;
     int value = arg->value;
 
+    shared_val *sv = arg->sv; 
+
     while (1) {
         /* TODO:
          * A thread must wait if the user is not at its location and the walk is not over. 
@@ -33,7 +35,34 @@ void* thread_main(void* thread_arg) {
                 *  If the value != 0, update the user location, reduce the current location value and signal the appropriate thread to continue the walk. 
          */
 
+        while (sv -> loc != id && !sv->over) { // wait till thread's turn or walk over
+            pthread_cond_wait(&sv->cond[id], &sv->mtx);
+        }
+
+        // if walk over exit
+        if (sv->over) {
+            pthread_mutex_unlock(&sv->mtx);
+            break;
+        }
+
+	// if value 0 at arrival, mark over and wake all
+        if (value == 0) {
+	    sv->over = 1;
+            for (int i = 0; i< n; i++) {
+                pthread_cond_signal(&sv->cond[i]);
+            }
+            pthread_mutex_unlock(&sv->mtx);
+            break;
+        } else { // compute next location, print, decrement, signal next thread
+            int steps = value;      
+	    int next = (id + steps) % n;
+            printf("At i=%d, user moves forward by %d space to i=%d. New value is %d\n", id, steps, next, value - 1);
+            value--;
+            sv->loc = next;
+            pthread_cond_signal(&sv->cond[next]);
+        }
     }
+    return NULL;
 }
 
 int main(int argc, char* argv[]) {
@@ -43,14 +72,30 @@ int main(int argc, char* argv[]) {
     }
 
     int n = atoi(argv[1]);          // number of locations (number of threads) 
+    char *end;
+    long n_long = strtol(argv[1], &end, 10);
+    if (*end != '\0' || n_long <= 0) {
+        fprintf(stderr, "Usage: %s n (where n must be a positive integer)\n", argv[0]);
+        return 1;
+    }
+    int n = (int)n_long;
     printf("n = %d\n", n);
 
     /* Initialize the shared_val */
     shared_val *val = malloc(sizeof(shared_val));
+    if (!val) {
+        perror("malloc shared_val");
+        exit(EXIT_FAILURE);
+    }
+
     val->loc = 0;                   // user always starts walking at location 0 
     val->over = 0;                  // over is initialized to 0. It is set to 1 when user arrives at a location where value is 0
     pthread_mutex_init(&val->mtx, NULL);        // initialize the mutex
     val->cond = malloc(sizeof(pthread_cond_t) * n);
+    if (!val->cond) {
+        perror("malloc cond array");
+        exit(EXIT_FAILURE);
+    }
     for (int i = 0; i < n; i++) {
         pthread_cond_init(&val->cond[i], NULL);     // initialize the condition variable for each thread
     }
@@ -65,6 +110,34 @@ int main(int argc, char* argv[]) {
      * Wait for all the threads to finish.
      * Destroy all resources.
      */
+
+
+    for (int i = 0; i < n; i++) {
+        args[i].n = n;
+        args[i].id = i;
+        args[i].value = i + 1;
+        args[i].sv = val;
+        status = pthread_create(&threads[i], NULL, thread_main, &args[i]);
+        assert(status == 0);
+    }
+
+    pthread_mutex_lock(&val->mtx);
+    pthread_cond_signal(&val->cond[0]);
+    pthread_mutex_unlock(&val->mtx);
+    for (int i = 0; i< n; i++) {
+        status = pthread_join(threads[i], NULL);
+        assert(status == 0);
+    }
+
+
+    printf("Ends at %d\n", val->loc);
+    pthread_mutex_destroy(&val->mtx);
+    for (int i = 0; i < n; i++) {
+        pthread_cond_destroy(&val->cond[i]);
+    }
+    free(val->cond);
+    free(val);
+
 
     return 0;
 }
