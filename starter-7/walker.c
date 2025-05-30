@@ -25,7 +25,7 @@ void* thread_main(void* thread_arg) {
     int value = arg->value;
 
     shared_val *sv = arg->sv; 
-
+    pthread_mutex_lock(&sv->mtx);
     while (1) {
         /* TODO:
          * A thread must wait if the user is not at its location and the walk is not over. 
@@ -56,7 +56,7 @@ void* thread_main(void* thread_arg) {
         } else { // compute next location, print, decrement, signal next thread
             int steps = value;      
 	    int next = (id + steps) % n;
-            printf("At i=%d, user moves forward by %d space to i=%d. New value is %d\n", id, steps, next, value - 1);
+            printf("At i=%d, user moves forward by %d space to i=%d. New value = %d\n", id, steps, next, value - 1);
             value--;
             sv->loc = next;
             pthread_cond_signal(&sv->cond[next]);
@@ -71,14 +71,16 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    int n = atoi(argv[1]);          // number of locations (number of threads) 
+//    int n = atoi(argv[1]);          // number of locations (number of threads) 
+    int n;
     char *end;
     long n_long = strtol(argv[1], &end, 10);
     if (*end != '\0' || n_long <= 0) {
         fprintf(stderr, "Usage: %s n (where n must be a positive integer)\n", argv[0]);
         return 1;
     }
-    int n = (int)n_long;
+//    int n = (int)n_long;
+    n = (int)n_long;
     printf("n = %d\n", n);
 
     /* Initialize the shared_val */
